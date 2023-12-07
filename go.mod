@@ -2,7 +2,10 @@ module github.com/Dmitrevicz/yp-gophermart-loyalty
 
 go 1.21.4
 
-require github.com/gin-gonic/gin v1.9.1
+require (
+	github.com/caarlos0/env/v10 v10.0.0
+	github.com/gin-gonic/gin v1.9.1
+)
 
 require (
 	github.com/bytedance/sonic v1.9.1 // indirect

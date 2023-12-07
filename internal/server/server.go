@@ -17,6 +17,7 @@ func New(cfg *config.Config) *server {
 
 	h := handler.New()
 
+	gin.SetMode(cfg.GinMode)
 	r := gin.New()
 	r.POST("/api/user/register", h.Register)
 	r.POST("/api/user/login", h.Login)
