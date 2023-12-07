@@ -4,6 +4,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"log"
 	"strings"
 
 	"github.com/caarlos0/env/v10"
@@ -15,6 +16,7 @@ type Config struct {
 	DatabaseDSN          string `env:"DATABASE_URI"`           // flag: -d
 	AccrualSystemAddress string `env:"ACCRUAL_SYSTEM_ADDRESS"` // flag: -r
 	GinMode              string `env:"GIN_MODE"`               // flag: --gin_mode
+	AuthSecretKey        string `env:"SECRET"`                 // flag: -s
 }
 
 // New creates config with default values set
@@ -30,6 +32,7 @@ func (cfg *Config) parseFlags() {
 	flag.StringVar(&cfg.DatabaseDSN, "d", cfg.DatabaseDSN, "data source name to connect to database")
 	flag.StringVar(&cfg.AccrualSystemAddress, "r", cfg.AccrualSystemAddress, "bonuses calculator service address")
 	flag.StringVar(&cfg.GinMode, "gin_mode", cfg.GinMode, "gin mode")
+	flag.StringVar(&cfg.AuthSecretKey, "s", cfg.AuthSecretKey, "secret key")
 
 	flag.Parse()
 }
@@ -52,6 +55,13 @@ func (cfg *Config) Parse() (err error) {
 func (cfg *Config) Validate() error {
 	if strings.TrimSpace(cfg.AccrualSystemAddress) == "" {
 		return validationError("accrual system address is required")
+	}
+
+	// XXX: Might move such checks to proper services initialization funcs
+	// instead of making config package to be responsible of it as it is now.
+	if strings.TrimSpace(cfg.AuthSecretKey) == "" {
+		// return validationError("auth secret key is empty") // must be an error in actual real-world production
+		log.Println("[Warning] auth secret key is empty")
 	}
 
 	return nil
