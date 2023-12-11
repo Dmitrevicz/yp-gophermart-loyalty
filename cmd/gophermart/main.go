@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"log"
-	"net/http"
 
 	"github.com/Dmitrevicz/yp-gophermart-loyalty/internal/config"
 	"github.com/Dmitrevicz/yp-gophermart-loyalty/internal/server"
@@ -18,8 +17,7 @@ func main() {
 	}
 	fmt.Printf("config (parsed): %+v\n", *cfg)
 
-	s := server.New(cfg)
-	if err := http.ListenAndServe(cfg.RunAddress, s); err != nil {
+	if err := server.Start(cfg); err != nil {
 		log.Fatal(err)
 	}
 }
