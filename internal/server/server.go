@@ -5,6 +5,7 @@ import (
 
 	"github.com/Dmitrevicz/yp-gophermart-loyalty/internal/config"
 	"github.com/Dmitrevicz/yp-gophermart-loyalty/internal/server/handler"
+	"github.com/Dmitrevicz/yp-gophermart-loyalty/internal/storage/postgres"
 	"github.com/gin-gonic/gin"
 )
 
@@ -60,4 +61,16 @@ func (s *server) configureRouter() {
 
 func (s *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	s.router.ServeHTTP(w, r)
+}
+
+func Start(cfg *config.Config) error {
+	if cfg.DatabaseDSN != "" {
+		if err := postgres.RunMigrations(cfg.DatabaseDSN); err != nil {
+			return err
+		}
+	}
+
+	s := New(cfg)
+
+	return http.ListenAndServe(s.cfg.RunAddress, s)
 }
