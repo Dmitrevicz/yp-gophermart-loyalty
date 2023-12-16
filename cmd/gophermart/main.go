@@ -17,6 +17,7 @@ func main() {
 	}
 	fmt.Printf("config (parsed): %+v\n", *cfg)
 
+	fmt.Printf("starting server on %s\n", cfg.RunAddress)
 	if err := server.Start(cfg); err != nil {
 		log.Fatal(err)
 	}
