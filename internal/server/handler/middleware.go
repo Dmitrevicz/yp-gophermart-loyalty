@@ -3,7 +3,6 @@ package handler
 import (
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/Dmitrevicz/yp-gophermart-loyalty/internal/config"
 	"github.com/gin-gonic/gin"
@@ -24,10 +23,10 @@ type middlewares struct {
 	auth *authService
 }
 
-func NewMiddlewares(cfg *config.Config) *middlewares {
+func NewMiddlewares(cfg *config.Config, auth *authService) *middlewares {
 	return &middlewares{
 		cfg:  cfg,
-		auth: NewAuthService(cfg.AuthSecretKey, time.Hour), // XXX: might put expiration into config
+		auth: auth,
 	}
 }
 

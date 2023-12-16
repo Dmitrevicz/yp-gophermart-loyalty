@@ -28,7 +28,7 @@ func RunMigrations(databaseURL string) error {
 
 	if err = m.Up(); err != nil && !errors.Is(err, migrate.ErrNoChange) {
 		// if errors.Is(err, migrate.ErrNoChange) {
-		// 	// write logs: "no new migrations found"
+		// 	// TODO: write logs: "no new migrations found"
 		// 	return nil
 		// }
 		return migrationsErr(err)

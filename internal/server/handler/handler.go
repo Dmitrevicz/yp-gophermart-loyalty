@@ -2,35 +2,29 @@ package handler
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/Dmitrevicz/yp-gophermart-loyalty/internal/config"
+	"github.com/Dmitrevicz/yp-gophermart-loyalty/internal/storage"
 	"github.com/gin-gonic/gin"
 )
 
 type handlers struct {
-	cfg  *config.Config
-	Mids *middlewares
+	cfg     *config.Config
+	auth    *authService
+	Mids    *middlewares
+	storage storage.Storage
 }
 
-func New(cfg *config.Config) *handlers {
+func New(cfg *config.Config, s storage.Storage) *handlers {
+	auther := NewAuthService(cfg.AuthSecretKey, time.Hour) // XXX: might put expiration into config
+
 	return &handlers{
-		cfg:  cfg,
-		Mids: NewMiddlewares(cfg),
+		cfg:     cfg,
+		auth:    auther,
+		Mids:    NewMiddlewares(cfg, auther),
+		storage: s,
 	}
-}
-
-// Register - регистрация пользователя.
-//
-// Route: POST /api/user/register
-func (h *handlers) Register(c *gin.Context) {
-	c.AbortWithStatus(http.StatusNotImplemented)
-}
-
-// Login - аутентификация пользователя.
-//
-// Route: POST /api/user/login
-func (h *handlers) Login(c *gin.Context) {
-	c.AbortWithStatus(http.StatusNotImplemented)
 }
 
 // PostOrders - загрузка пользователем номера заказа для расчёта.

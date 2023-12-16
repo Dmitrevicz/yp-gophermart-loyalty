@@ -1,22 +1,29 @@
 package server
 
 import (
+	"database/sql"
+	"errors"
 	"net/http"
 
 	"github.com/Dmitrevicz/yp-gophermart-loyalty/internal/config"
 	"github.com/Dmitrevicz/yp-gophermart-loyalty/internal/server/handler"
+	"github.com/Dmitrevicz/yp-gophermart-loyalty/internal/storage"
 	"github.com/Dmitrevicz/yp-gophermart-loyalty/internal/storage/postgres"
 	"github.com/gin-gonic/gin"
+
+	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
 type server struct {
-	cfg    *config.Config
-	router *gin.Engine
+	cfg     *config.Config
+	router  *gin.Engine
+	storage storage.Storage
 }
 
-func New(cfg *config.Config) *server {
+func New(cfg *config.Config, storage storage.Storage) *server {
 	s := &server{
-		cfg: cfg,
+		cfg:     cfg,
+		storage: storage,
 	}
 
 	s.configureRouter()
@@ -25,20 +32,12 @@ func New(cfg *config.Config) *server {
 }
 
 func (s *server) configureRouter() {
-	h := handler.New(s.cfg)
+	h := handler.New(s.cfg, s.storage)
 
 	gin.SetMode(s.cfg.GinMode)
 	s.router = gin.New()
 
 	s.router.Use(gin.Logger(), gin.Recovery()) // might use ~WithWriter() funcs to write to custom logger
-
-	// Switched from this definition to only user's router group,
-	// so provided exclusion list is no more needed:
-	// r.Use(h.Mids.CheckAuth(
-	// 	// excluded paths:
-	// 	"/api/user/register",
-	// 	"/api/user/login",
-	// ))
 
 	api := s.router.Group("/api")
 	{
@@ -63,14 +62,47 @@ func (s *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	s.router.ServeHTTP(w, r)
 }
 
-func Start(cfg *config.Config) error {
+func newDB(dsn string) (db *sql.DB, err error) {
+	db, err = sql.Open("pgx", dsn)
+	if err != nil {
+		return nil, err
+	}
+
+	if err = db.Ping(); err != nil {
+		return nil, err
+	}
+
+	return db, nil
+}
+
+// ConfigureStorage creates new storage instance for
+// provided data source name (database url).
+func ConfigureStorage(dsn string) (storage.Storage, error) {
+	if dsn == "" {
+		return nil, errors.New("can't configure storage: empty data source name (database url)")
+	}
+
+	db, err := newDB(dsn)
+	if err != nil {
+		return nil, errors.New("can't configure storage: " + err.Error())
+	}
+
+	return postgres.New(db), nil
+}
+
+func Start(cfg *config.Config) (err error) {
 	if cfg.DatabaseDSN != "" {
-		if err := postgres.RunMigrations(cfg.DatabaseDSN); err != nil {
+		if err = postgres.RunMigrations(cfg.DatabaseDSN); err != nil {
 			return err
 		}
 	}
 
-	s := New(cfg)
+	storage, err := ConfigureStorage(cfg.DatabaseDSN)
+	if err != nil {
+		return err
+	}
 
-	return http.ListenAndServe(s.cfg.RunAddress, s)
+	server := New(cfg, storage)
+
+	return http.ListenAndServe(cfg.RunAddress, server)
 }

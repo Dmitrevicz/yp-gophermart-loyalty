@@ -1,14 +1,21 @@
 package handler
 
 import (
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"golang.org/x/crypto/bcrypt"
 )
 
-// authService implements jwt auth tokens signing and validation.
+const MaxPasswordLength = 72 // limited by bcrypt
+
+// authService implements jwt auth tokens signing and validation,
+// and passwords hashing.
+//
+// FIXME: might move auth code somewhere else... maybe its own separate module
 type authService struct {
 	// secret key for tokens to be signed with
 	secretKey []byte
@@ -71,4 +78,27 @@ func (a *authService) ParseToken(tokenString string) (userID int64, err error) {
 	}
 
 	return claims.UserID, nil
+}
+
+// PasswordHash calculates hash for password.
+func (a *authService) PasswordHash(password string) (hash string, err error) {
+	bytesHash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return "", err
+	}
+
+	// Not shure if I need to hex it. I guess not, but at least it's easier to read while debugging.
+	hash = hex.EncodeToString(bytesHash)
+
+	return hash, nil
+}
+
+// CheckPasswordHash compares password and its expected hash.
+func (a *authService) CheckPasswordHash(hash, password string) (err error) {
+	bytesHash, err := hex.DecodeString(hash)
+	if err != nil {
+		return err
+	}
+
+	return bcrypt.CompareHashAndPassword(bytesHash, []byte(password))
 }
