@@ -17,12 +17,14 @@ type Config struct {
 	AccrualSystemAddress string `env:"ACCRUAL_SYSTEM_ADDRESS"` // flag: -r
 	GinMode              string `env:"GIN_MODE"`               // flag: --gin_mode
 	AuthSecretKey        string `env:"SECRET"`                 // flag: -s
+	LogLevel             string `env:"LOG_LVL"`                // flag: --log_lvl
 }
 
 // New creates config with default values set
 func New() *Config {
 	return &Config{
 		RunAddress: "localhost:8080",
+		LogLevel:   "info",
 	}
 }
 
@@ -33,6 +35,7 @@ func (cfg *Config) parseFlags() {
 	flag.StringVar(&cfg.AccrualSystemAddress, "r", cfg.AccrualSystemAddress, "bonuses calculator service address")
 	flag.StringVar(&cfg.GinMode, "gin_mode", cfg.GinMode, "gin mode")
 	flag.StringVar(&cfg.AuthSecretKey, "s", cfg.AuthSecretKey, "secret key")
+	flag.StringVar(&cfg.LogLevel, "log_lvl", cfg.LogLevel, "logger level")
 
 	flag.Parse()
 }

@@ -51,7 +51,7 @@ func (h *handlers) Register(c *gin.Context) {
 	}
 
 	// check if user with provided login is already exists
-	if _, err = h.storage.Users().FindByLogin(user.Login); err == nil {
+	if _, err = h.storage.Users().FindByLogin(creds.Login); err == nil {
 		// FIXME: return proper status code and message
 		c.AbortWithStatus(http.StatusConflict)
 		return
@@ -59,7 +59,7 @@ func (h *handlers) Register(c *gin.Context) {
 		if errors.Is(err, storage.ErrNotFound) {
 			user.Login = creds.Login
 		} else {
-			c.AbortWithStatus(http.StatusInternalServerError)
+			_ = c.AbortWithError(http.StatusInternalServerError, err)
 			return
 		}
 	}
@@ -72,18 +72,18 @@ func (h *handlers) Register(c *gin.Context) {
 
 	// register new user
 	if user.ID, err = h.storage.Users().Create(user); err != nil {
-		c.AbortWithStatus(http.StatusInternalServerError)
+		_ = c.AbortWithError(http.StatusInternalServerError, err)
 		return
 	}
 
 	// create new auth token
 	token, err = h.auth.CreateToken(user.ID)
 	if err != nil {
-		c.AbortWithStatus(http.StatusInternalServerError)
+		_ = c.AbortWithError(http.StatusInternalServerError, err)
 		return
 	}
 
-	// TODO: return created id and jwt token?
+	// TODO: return created id and jwt token as json?
 	c.Header("Authorization", "Bearer "+token)
 	c.Status(http.StatusOK)
 }
@@ -135,7 +135,7 @@ func (h *handlers) Login(c *gin.Context) {
 			c.AbortWithStatus(http.StatusUnauthorized)
 			return
 		} else {
-			c.AbortWithStatus(http.StatusInternalServerError)
+			_ = c.AbortWithError(http.StatusInternalServerError, err)
 			return
 		}
 	}
@@ -143,7 +143,7 @@ func (h *handlers) Login(c *gin.Context) {
 	// create new auth token
 	token, err = h.auth.CreateToken(user.ID)
 	if err != nil {
-		c.AbortWithStatus(http.StatusInternalServerError)
+		_ = c.AbortWithError(http.StatusInternalServerError, err)
 		return
 	}
 
