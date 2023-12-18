@@ -3,9 +3,14 @@ package handler
 import (
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/Dmitrevicz/yp-gophermart-loyalty/internal/config"
+	"github.com/Dmitrevicz/yp-gophermart-loyalty/internal/logger"
+	ginzap "github.com/gin-contrib/zap"
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 // GetToken - retrieve auth token from header.
@@ -30,6 +35,8 @@ func NewMiddlewares(cfg *config.Config, auth *authService) *middlewares {
 	}
 }
 
+// CheckAuth checks if user is authorized properly. Stores user id in context on
+// success. Parses and validates auth token. Paths can be skipped by using arg.
 func (m *middlewares) CheckAuth(exclude ...string) gin.HandlerFunc {
 	// Build a set of excluded paths to later be checked on.
 	// Race conditions must not be the case since I initialize the map only once
@@ -64,4 +71,54 @@ func (m *middlewares) CheckAuth(exclude ...string) gin.HandlerFunc {
 
 		setContextUserID(c, userID)
 	}
+}
+
+// LogErrors writes errors to stderr.
+func (m *middlewares) LogErrors() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		start := time.Now()
+
+		// some middlewares may modify this values
+		path := c.Request.URL.Path
+		query := c.Request.URL.RawQuery
+
+		c.Next()
+
+		errs := c.Errors.ByType(gin.ErrorTypePrivate)
+		if len(errs) == 0 {
+			return
+		}
+
+		end := time.Now()
+		latency := end.Sub(start)
+
+		fields := []zapcore.Field{
+			zap.Int("status", c.Writer.Status()),
+			zap.String("method", c.Request.Method),
+			zap.String("path", path),
+			zap.String("query", query),
+			zap.Duration("latency", latency),
+		}
+
+		userID := readContextUserID(c)
+		if userID > 0 {
+			fields = append(fields, zap.Int64("user_id", userID))
+		}
+
+		errMsg := errs[0].Error()
+		// if many - print all of them
+		if len(errs) > 1 {
+			fields = append(fields, zap.Strings("errors", c.Errors.Errors()))
+		}
+
+		// Workaround: WithOptions allows to skip, in this case, unnecessary stacktrace output
+		logger.Log.WithOptions(zap.AddStacktrace(zap.DPanicLevel)).Error(errMsg, fields...)
+
+	}
+}
+
+// Recovery returns a middleware that recovers from any panics and writes a 500
+// if there was one. Uses zap logger.
+func (m *middlewares) Recovery() gin.HandlerFunc {
+	return ginzap.RecoveryWithZap(logger.Log, true)
 }
