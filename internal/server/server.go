@@ -94,7 +94,8 @@ func ConfigureStorage(dsn string) (storage.Storage, error) {
 
 func Start(cfg *config.Config) (err error) {
 	if cfg.DatabaseDSN != "" {
-		if err = postgres.RunMigrations(cfg.DatabaseDSN); err != nil {
+		err = postgres.RunMigrations(cfg.DatabaseDSN, cfg.VerboseMigrateLogger)
+		if err != nil {
 			return err
 		}
 	}

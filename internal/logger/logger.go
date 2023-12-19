@@ -35,3 +35,28 @@ func Initialize(level string) error {
 func Sync() {
 	_ = Log.Sync()
 }
+
+// migrationLogger implements migrate.Logger interface.
+type migrationLogger struct {
+	logger  *zap.SugaredLogger
+	verbose bool
+	prefix  string
+}
+
+func NewMigrationLogger(logger *zap.Logger, verbose bool, prefix string) *migrationLogger {
+	return &migrationLogger{
+		logger:  logger.Sugar(),
+		verbose: verbose,
+		prefix:  prefix,
+	}
+}
+
+// Printf is like fmt.Printf
+func (ml *migrationLogger) Printf(format string, v ...interface{}) {
+	ml.logger.Infof(ml.prefix+format, v...)
+}
+
+// Verbose should return true when verbose logging output is wanted
+func (ml *migrationLogger) Verbose() bool {
+	return ml.verbose
+}
