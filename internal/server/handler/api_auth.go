@@ -44,7 +44,7 @@ func (h *handlers) Register(c *gin.Context) {
 		return
 	}
 
-	if len(creds.Password) > MaxPasswordLength || len(creds.Password) < 1 {
+	if len(creds.Password) > h.auth.MaxPasswordLength() || len(creds.Password) < 1 {
 		// "password is too long - must be less then 72 bytes"
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
@@ -116,7 +116,7 @@ func (h *handlers) Login(c *gin.Context) {
 		return
 	}
 
-	if len(creds.Password) > MaxPasswordLength || len(creds.Password) < 1 {
+	if len(creds.Password) > h.auth.MaxPasswordLength() || len(creds.Password) < 1 {
 		// "password is too long - must be less then 72 bytes"
 		c.AbortWithStatus(http.StatusBadRequest)
 		return

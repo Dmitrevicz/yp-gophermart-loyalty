@@ -17,6 +17,7 @@ type Config struct {
 	AccrualSystemAddress string `env:"ACCRUAL_SYSTEM_ADDRESS"` // flag: -r
 	GinMode              string `env:"GIN_MODE"`               // flag: --gin_mode
 	AuthSecretKey        string `env:"SECRET"`                 // flag: -s
+	AuthTokenLifetimeSec int64  `env:"TOKEN_LIFETIME"`         // flag: --token_lifetime
 	LogLevel             string `env:"LOG_LVL"`                // flag: --log_lvl
 	VerboseMigrateLogger bool   `env:"VERBOSE_MIGRATE_LOGGER"` // flag: --verbose_migrate_logger
 }
@@ -26,6 +27,7 @@ func New() *Config {
 	return &Config{
 		RunAddress:           "localhost:8080",
 		LogLevel:             "info",
+		AuthTokenLifetimeSec: 3600, // 1h
 		VerboseMigrateLogger: true,
 	}
 }
@@ -37,6 +39,7 @@ func (cfg *Config) parseFlags() {
 	flag.StringVar(&cfg.AccrualSystemAddress, "r", cfg.AccrualSystemAddress, "bonuses calculator service address")
 	flag.StringVar(&cfg.GinMode, "gin_mode", cfg.GinMode, "gin mode")
 	flag.StringVar(&cfg.AuthSecretKey, "s", cfg.AuthSecretKey, "secret key")
+	flag.Int64Var(&cfg.AuthTokenLifetimeSec, "token_lifetime", cfg.AuthTokenLifetimeSec, "auth token lifetime in seconds")
 	flag.StringVar(&cfg.LogLevel, "log_lvl", cfg.LogLevel, "logger level")
 	flag.BoolVar(&cfg.VerboseMigrateLogger, "verbose_migrate_logger", cfg.VerboseMigrateLogger, "verbose logging on migration run")
 
