@@ -1,4 +1,5 @@
-package handler
+// Package auth contains AuthService implementation.
+package auth
 
 import (
 	"encoding/hex"
@@ -10,12 +11,10 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-const MaxPasswordLength = 72 // limited by bcrypt
+const defaultTokenLifetime = time.Hour
 
 // authService implements jwt auth tokens signing and validation,
-// and passwords hashing.
-//
-// FIXME: might move auth code somewhere else... maybe its own separate module
+// and passwords hashing. Implements AuthService interface.
 type authService struct {
 	// secret key for tokens to be signed with
 	secretKey []byte
@@ -24,11 +23,23 @@ type authService struct {
 	expiry time.Duration
 }
 
-func NewAuthService(secretKey string, expiry time.Duration) *authService {
+func New(secretKey string, expiry time.Duration) *authService {
+	if expiry <= 0 {
+		expiry = defaultTokenLifetime
+	}
+
 	return &authService{
 		secretKey: []byte(secretKey),
 		expiry:    expiry,
 	}
+}
+
+const maxPasswordLength = 72 // limited by bcrypt
+
+// MaxPasswordLength returns max password length, which sometimes can be
+// limited (like in bcrypt).
+func (a *authService) MaxPasswordLength() int {
+	return maxPasswordLength
 }
 
 // Claims - jwt fields used as auth claims.

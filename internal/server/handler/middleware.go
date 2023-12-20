@@ -7,6 +7,7 @@ import (
 
 	"github.com/Dmitrevicz/yp-gophermart-loyalty/internal/config"
 	"github.com/Dmitrevicz/yp-gophermart-loyalty/internal/logger"
+	"github.com/Dmitrevicz/yp-gophermart-loyalty/internal/service"
 	ginzap "github.com/gin-contrib/zap"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
@@ -25,10 +26,10 @@ func GetToken(r *http.Request) string {
 
 type middlewares struct {
 	cfg  *config.Config
-	auth *authService
+	auth service.AuthService
 }
 
-func NewMiddlewares(cfg *config.Config, auth *authService) *middlewares {
+func NewMiddlewares(cfg *config.Config, auth service.AuthService) *middlewares {
 	return &middlewares{
 		cfg:  cfg,
 		auth: auth,
