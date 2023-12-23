@@ -8,8 +8,10 @@ import (
 )
 
 type Storage struct {
-	db    *sql.DB
-	users *UsersRepo
+	db      *sql.DB
+	users   *UsersRepo
+	orders  *OrdersRepo
+	balance *BalanceRepo
 }
 
 func New(db *sql.DB) *Storage {
@@ -17,7 +19,10 @@ func New(db *sql.DB) *Storage {
 		db: db,
 	}
 
+	// initialize all repos once before they will be used
 	s.users = NewUsersRepo(s)
+	s.orders = NewOrdersRepo(s)
+	s.balance = NewBalanceRepo(s)
 
 	return s
 }
@@ -28,4 +33,12 @@ func (s *Storage) Users() storage.UsersRepository {
 	// }
 
 	return s.users
+}
+
+func (s *Storage) Orders() storage.OrdersRepository {
+	return s.orders
+}
+
+func (s *Storage) Balance() storage.BalanceRepository {
+	return s.balance
 }
