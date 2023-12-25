@@ -34,6 +34,7 @@ type UsersRepository interface {
 type OrdersRepository interface {
 	Get(id string) (order model.Order, err error)
 	GetByUserID(userID int64) (order []model.Order, err error)
+	LastOrderNumber() (orderNumber string, err error)
 	Create(order model.Order) (id string, err error)
 	SetProcessedStatus(orderID, status string, accrual float64) (processedAt time.Time, err error)
 }
