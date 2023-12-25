@@ -32,21 +32,6 @@ func New(cfg *config.Config, s storage.Storage) *handlers {
 	}
 }
 
-// PostOrders - загрузка пользователем номера заказа для расчёта.
-//
-// Route: POST /api/user/orders
-func (h *handlers) PostOrders(c *gin.Context) {
-	c.AbortWithStatus(http.StatusNotImplemented)
-}
-
-// GetOrders - получение списка загруженных пользователем номеров заказов, статусов их обработки и информации о начислениях.
-//
-// Route: GET /api/user/orders
-func (h *handlers) GetOrders(c *gin.Context) {
-	_ = readContextUserID(c)
-	c.AbortWithStatus(http.StatusNotImplemented)
-}
-
 // Balance - получение текущего баланса счёта баллов лояльности пользователя.
 //
 // Route: GET /api/user/balance

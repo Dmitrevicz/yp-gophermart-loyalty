@@ -3,6 +3,7 @@ package postgres
 import (
 	"database/sql"
 	"errors"
+	"time"
 
 	"github.com/Dmitrevicz/yp-gophermart-loyalty/internal/logger"
 	"github.com/Dmitrevicz/yp-gophermart-loyalty/internal/model"
@@ -42,11 +43,11 @@ func (r *BalanceRepo) Get(userID int64) (balance model.Balance, err error) {
 	}
 	defer stmt.Close()
 
-	// TODO: timestamps layout = time.RFC3339
+	var tsUpdated time.Time
 
 	if err = stmt.QueryRow(userID).Scan(
 		&balance.Balance,
-		&balance.Updated,
+		&tsUpdated,
 		&balance.TotalWithdrawn,
 	); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -56,6 +57,7 @@ func (r *BalanceRepo) Get(userID int64) (balance model.Balance, err error) {
 	}
 
 	balance.UserID = userID
+	balance.Updated = tsUpdated.Format(model.LayoutTimestamps)
 
 	return balance, nil
 }
@@ -187,7 +189,7 @@ func (r *BalanceRepo) Withdrawals(userID int64) (history []model.Withdrawal, err
 	}
 	defer stmt.Close()
 
-	// TODO: timestamps layout = time.RFC3339
+	var tsProcessedAt time.Time
 
 	rows, err := stmt.Query(userID)
 	if err != nil {
@@ -200,10 +202,14 @@ func (r *BalanceRepo) Withdrawals(userID int64) (history []model.Withdrawal, err
 		if err = rows.Scan(
 			&wd.Order,
 			&wd.Value,
-			&wd.ProcessedAt,
+			&tsProcessedAt,
 		); err != nil {
 			return history, err
 		}
+
+		wd.ProcessedAt = tsProcessedAt.Format(model.LayoutTimestamps)
+
+		history = append(history, wd)
 	}
 
 	return history, rows.Err()

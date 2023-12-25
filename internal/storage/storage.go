@@ -32,7 +32,8 @@ type UsersRepository interface {
 //
 // TODO: implement id string generator for orders
 type OrdersRepository interface {
-	Get(id string) (order model.Order, err error)
+	// Get returns nil order when wasn't found and storage.ErrNotFound error.
+	Get(id model.OrderNumber) (order *model.Order, err error)
 	GetByUserID(userID int64) (order []model.Order, err error)
 	LastOrderNumber() (orderNumber string, err error)
 	Create(order model.Order) (id string, err error)
