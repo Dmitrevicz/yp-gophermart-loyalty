@@ -37,7 +37,7 @@ func NewOrderNumberGenerator(seed ...string) (numgen *OrderNumberGenerator, err 
 func (g *OrderNumberGenerator) New() (number string, err error) {
 	count := g.counter.Add(1)
 	if count == 0 {
-		return "18", ErrOrderGeneratorLimitReached
+		return "0", ErrOrderGeneratorLimitReached
 	}
 
 	s := strconv.FormatUint(count, 10)

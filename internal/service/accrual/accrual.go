@@ -18,6 +18,7 @@ const (
 	StatusInvalid    = "INVALID"    // заказ не принят к расчёту, и вознаграждение не будет начислено
 	StatusProcessing = "PROCESSING" // расчёт начисления в процессе
 	StatusProcessed  = "PROCESSED"  // расчёт начисления окончен
+	StatusOrderNew   = "NEW"
 )
 
 var (

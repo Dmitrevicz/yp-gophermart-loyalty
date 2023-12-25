@@ -7,6 +7,8 @@ import (
 
 	"github.com/Dmitrevicz/yp-gophermart-loyalty/internal/model"
 	"github.com/Dmitrevicz/yp-gophermart-loyalty/internal/storage"
+	"github.com/jackc/pgerrcode"
+	"github.com/jackc/pgx/v5/pgconn"
 )
 
 type UsersRepo struct {
@@ -84,9 +86,17 @@ func (r *UsersRepo) Create(user model.User) (id int64, err error) {
 	}
 	defer stmt.Close()
 
-	// TODO: handle login uniqueness error
 	err = stmt.QueryRow(user.Login, user.PasswordHash).Scan(&id)
 	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) {
+			if pgErr.Code == pgerrcode.UniqueViolation {
+				// might not use it anywhere, but let it be...
+				// (there is already handler-level check on user signup)
+				return id, storage.ErrDuplicateEntry
+			}
+		}
+
 		return id, err
 	}
 
