@@ -144,6 +144,56 @@ func (r *OrdersRepo) GetByUserID(userID int64) (orders []model.Order, err error)
 	return orders, rows.Err()
 }
 
+const queryGetOrdersByStatus = `SELECT ` +
+	fieldsOrders + `
+	FROM orders WHERE status = $1
+	ORDER BY uploaded_at ASC;
+`
+
+func (r *OrdersRepo) GetByStatus(status string) (orders []model.Order, err error) {
+	orders = make([]model.Order, 0)
+
+	stmt, err := r.s.db.Prepare(queryGetOrdersByStatus)
+	if err != nil {
+		return orders, err
+	}
+	defer stmt.Close()
+
+	// order.ProcessedAt is nullable
+	var nsProcessedAt sql.NullTime
+	var tsUploadedAt time.Time
+
+	rows, err := stmt.Query(status)
+	if err != nil {
+		return orders, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var order model.Order
+		if err = rows.Scan(
+			&order.ID,
+			&order.UserID,
+			&tsUploadedAt,
+			&order.Status,
+			&order.Accrual,
+			&nsProcessedAt,
+		); err != nil {
+			return orders, err
+		}
+
+		if nsProcessedAt.Valid {
+			order.ProcessedAt = nsProcessedAt.Time.Format(model.LayoutTimestamps)
+		}
+
+		order.UploadedAt = tsUploadedAt.Format(model.LayoutTimestamps)
+
+		orders = append(orders, order)
+	}
+
+	return orders, rows.Err()
+}
+
 // newOrderNumber generates new order number.
 //
 // Почему-то сначала подумал, что номер заказа надо генерить самому.

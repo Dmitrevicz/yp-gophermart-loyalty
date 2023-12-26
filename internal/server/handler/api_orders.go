@@ -6,10 +6,12 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/Dmitrevicz/yp-gophermart-loyalty/internal/logger"
 	"github.com/Dmitrevicz/yp-gophermart-loyalty/internal/model"
 	"github.com/Dmitrevicz/yp-gophermart-loyalty/internal/service/accrual"
 	"github.com/Dmitrevicz/yp-gophermart-loyalty/internal/storage"
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 )
 
 // PostOrders handler func.
@@ -64,6 +66,15 @@ func (h *handlers) PostOrders(c *gin.Context) {
 		_ = c.AbortWithError(http.StatusInternalServerError, err)
 		return
 	}
+
+	go func() {
+		if err = h.accrual.Poller().RegisterNewOrder(order.ID); err != nil {
+			logger.Log.Error("RegisterNewOrder for Poller failed",
+				zap.Error(err),
+				zap.String("order", string(order.ID)),
+			)
+		}
+	}()
 
 	c.Status(http.StatusAccepted)
 }

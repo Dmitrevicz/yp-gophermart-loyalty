@@ -52,7 +52,6 @@ func (h *handlers) Register(c *gin.Context) {
 
 	// check if user with provided login is already exists
 	if _, err = h.storage.Users().FindByLogin(creds.Login); err == nil {
-		// FIXME: return proper status code and message
 		c.AbortWithStatus(http.StatusConflict)
 		return
 	} else {
