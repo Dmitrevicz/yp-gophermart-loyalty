@@ -39,7 +39,7 @@ func initOrderNumbersGenerator(repo *OrdersRepo) (err error) {
 		return err
 	}
 
-	repo.numgen, err = generator.NewOrderNumberGenerator(lastNum)
+	repo.numgen, err = generator.NewOrderNumberGenerator(string(lastNum))
 	if err != nil {
 		return err
 	}
@@ -218,7 +218,7 @@ const querySetProcessedOrder = `
 	WHERE id = $1;
 `
 
-func (r *OrdersRepo) SetProcessedStatus(orderID, status string, accrual float64) (processedAt time.Time, err error) {
+func (r *OrdersRepo) SetProcessedStatus(orderID model.OrderNumber, status string, accrual float64) (processedAt time.Time, err error) {
 	processedAt = time.Now()
 
 	_, err = r.s.db.Exec(querySetProcessedOrder,
@@ -236,7 +236,7 @@ func (r *OrdersRepo) SetProcessedStatus(orderID, status string, accrual float64)
 
 const queryGetLastOrderNum = `SELECT id FROM orders ORDER BY uploaded_at DESC LIMIT 1;`
 
-func (r *OrdersRepo) LastOrderNumber() (orderNumber string, err error) {
+func (r *OrdersRepo) LastOrderNumber() (orderNumber model.OrderNumber, err error) {
 	if err = r.s.db.QueryRow(queryGetLastOrderNum).Scan(
 		&orderNumber,
 	); err != nil {

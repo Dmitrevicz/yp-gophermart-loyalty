@@ -4,6 +4,7 @@ import (
 	"regexp"
 
 	"github.com/ShiraazMoollatjie/goluhn"
+	"github.com/google/uuid"
 )
 
 type User struct {
@@ -45,16 +46,17 @@ type AccrualOrder struct {
 
 // Balance shows current user's loyalty points.
 type Balance struct {
-	UserID         int64   `json:"user_id"` // FIXME: might remove UserID from struct
-	Balance        float64 `json:"balance"`
-	TotalWithdrawn float64 `json:"total_withdrawn"`
+	UserID         int64   `json:"user_id"`   // FIXME: might remove UserID from struct
+	Balance        float64 `json:"current"`   // current balance of loyalty points
+	TotalWithdrawn float64 `json:"withdrawn"` // total withdrawn points amount
 	Updated        string  `json:"updated"`
 }
 
 // Withdrawal is a single withdrawal entry to be shown in history later.
 type Withdrawal struct {
-	Order       string  `json:"order"` // гипотетический номер нового заказа пользователя
-	ProcessedAt string  `json:"processed_at,omitempty"`
-	Value       float64 `json:"value"`
-	UserID      int64   `json:"user_id"` // FIXME: might remove UserID from struct
+	ID          uuid.UUID `json:"id"`           // withdrawal id
+	Order       string    `json:"order"`        // specs: "гипотетический номер нового заказа пользователя"
+	ProcessedAt string    `json:"processed_at"` // timestamp
+	Value       float64   `json:"sum"`          // withdrawn points amount
+	UserID      int64     `json:"user_id"`      // FIXME: might remove UserID from struct
 }
