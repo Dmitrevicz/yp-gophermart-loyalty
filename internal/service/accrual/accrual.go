@@ -9,6 +9,8 @@ import (
 	"net/http"
 
 	"github.com/Dmitrevicz/yp-gophermart-loyalty/internal/model"
+	"github.com/Dmitrevicz/yp-gophermart-loyalty/internal/service"
+	"github.com/Dmitrevicz/yp-gophermart-loyalty/internal/storage"
 	"github.com/Dmitrevicz/yp-gophermart-loyalty/internal/util/client"
 	"github.com/Dmitrevicz/yp-gophermart-loyalty/internal/util/sync"
 )
@@ -31,25 +33,34 @@ const DefaultMaxReq = 32
 type AccrualService struct {
 	client    *http.Client
 	semaphore *sync.Semaphore
+	poller    *Poller
 }
 
-func New(addr string) *AccrualService {
+func New(addr string, storage storage.Storage) *AccrualService {
 	pathGetOrderAccrual = addr + pathGetOrderAccrual
 
-	return &AccrualService{
+	accrualService := &AccrualService{
 		client:    client.NewClientDefault(),
 		semaphore: sync.NewSemaphore(DefaultMaxReq),
 	}
+
+	accrualService.poller = NewPoller(accrualService, storage)
+
+	return accrualService
+}
+
+func (a *AccrualService) Poller() service.AccrualPoller {
+	return a.poller
 }
 
 // Order - получение информации о расчёте начислений баллов лояльности.
 //
 // GET {accrual_service}/api/orders/{number}
-func (a *AccrualService) Order(id string) (accrual model.AccrualOrder, err error) {
+func (a *AccrualService) Order(id model.OrderNumber) (accrual model.AccrualOrder, err error) {
 	a.semaphore.Acquire()
 	defer a.semaphore.Release()
 
-	url := pathGetOrderAccrual + id
+	url := pathGetOrderAccrual + string(id)
 	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
 		return accrual, fmt.Errorf("error preparing request: %w", err)
@@ -57,8 +68,7 @@ func (a *AccrualService) Order(id string) (accrual model.AccrualOrder, err error
 
 	resp, err := a.client.Do(req)
 	if err != nil {
-		// return nil, model.NewRetriableError(fmt.Errorf("error while doing the request: %w", err))
-		return accrual, fmt.Errorf("error while doing the request: %w", err)
+		return accrual, model.NewRetriableError(fmt.Errorf("error while doing the request: %w", err))
 	}
 	defer resp.Body.Close()
 
@@ -73,19 +83,34 @@ func (a *AccrualService) Order(id string) (accrual model.AccrualOrder, err error
 		}
 	}
 
-	// TODO: handle other expected codes
-	// Возможные коды ответа:
-	//	200 - успешная обработка запроса
-	//	204 - заказ не зарегистрирован в системе расчета
-	//	429 - превышено количество запросов к сервису
-	//	500 - внутренняя ошибка сервера
-	if resp.StatusCode != 200 {
-		err = fmt.Errorf("unexpected response status code: %s, body: %s", resp.Status, string(body))
-		// if resp.StatusCode >= 500 && resp.StatusCode < 600 {
-		// 	return nil, model.NewRetriableError(err)
-		// }
-		return accrual, err
+	if resp.StatusCode != http.StatusOK {
+		switch resp.StatusCode {
+		// 204 - заказ не зарегистрирован в системе расчета
+		case http.StatusNoContent:
+			err = model.NewRetriableError(fmt.Errorf(
+				"order was not registered - status code: %s, order: %s",
+				resp.Status,
+				string(id),
+			))
+		// 429 - превышено количество запросов к сервису
+		case http.StatusTooManyRequests:
+			headerRetryAfter := resp.Header.Get("Retry-After")
+			err = model.NewRetriableError(fmt.Errorf(
+				"too many requests - status code: %s, order: %s, retry-after: %s, body: %s",
+				resp.Status, string(id), headerRetryAfter, string(body),
+			))
+		// 500 - внутренняя ошибка сервера
+		case http.StatusInternalServerError:
+			err = model.NewRetriableError(fmt.Errorf(
+				"internal server error - status code: %s, order: %s, body: %s",
+				resp.Status, string(id), string(body),
+			))
+		default:
+			err = fmt.Errorf("unexpected response status code: %s, order: %s, body: %s",
+				resp.Status, string(id), string(body),
+			)
+		}
 	}
 
-	return accrual, nil
+	return accrual, err
 }

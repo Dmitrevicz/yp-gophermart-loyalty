@@ -55,12 +55,12 @@ func (a *authService) CreateToken(userID int64) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, Claims{
 		RegisteredClaims: jwt.RegisteredClaims{
 			IssuedAt:  jwt.NewNumericDate(ts),
-			ExpiresAt: jwt.NewNumericDate(ts.Add(a.expiry)), // XXX: maybe should be put into config
+			ExpiresAt: jwt.NewNumericDate(ts.Add(a.expiry)),
 		},
 		UserID: userID,
 	})
 
-	tokenString, err := token.SignedString(a.secretKey) // TODO: get secret from config
+	tokenString, err := token.SignedString(a.secretKey)
 	if err != nil {
 		return "", err
 	}

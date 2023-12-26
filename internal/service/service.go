@@ -5,7 +5,18 @@ import "github.com/Dmitrevicz/yp-gophermart-loyalty/internal/model"
 
 // AccrualService retrieves accrual info from external service.
 type AccrualService interface {
-	Order(id string) (model.AccrualOrder, error)
+	AccrualClient
+	Poller() AccrualPoller
+}
+
+// AccrualClient retrieves accrual info from external service.
+type AccrualClient interface {
+	Order(id model.OrderNumber) (model.AccrualOrder, error)
+}
+
+type AccrualPoller interface {
+	Start() error
+	RegisterNewOrder(orderNumber model.OrderNumber) error
 }
 
 type AuthTokenProvider interface {

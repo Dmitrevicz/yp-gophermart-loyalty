@@ -33,6 +33,7 @@ type OrdersRepository interface {
 	// Get returns nil order when wasn't found and storage.ErrNotFound error.
 	Get(id model.OrderNumber) (order *model.Order, err error)
 	GetByUserID(userID int64) (order []model.Order, err error)
+	GetByStatus(status string) (order []model.Order, err error)
 	LastOrderNumber() (orderNumber model.OrderNumber, err error)
 	Create(order model.Order) (id string, err error)
 	SetProcessedStatus(orderID model.OrderNumber, status string, accrual float64) (processedAt time.Time, err error)

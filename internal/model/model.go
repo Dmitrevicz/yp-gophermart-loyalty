@@ -2,6 +2,7 @@ package model
 
 import (
 	"regexp"
+	"sync"
 
 	"github.com/ShiraazMoollatjie/goluhn"
 	"github.com/google/uuid"
@@ -59,4 +60,51 @@ type Withdrawal struct {
 	ProcessedAt string    `json:"processed_at"` // timestamp
 	Value       float64   `json:"sum"`          // withdrawn points amount
 	UserID      int64     `json:"user_id"`      // FIXME: might remove UserID from struct
+}
+
+type OrdersMap struct {
+	orders map[OrderNumber]Order
+	mu     sync.RWMutex
+}
+
+func NewOrdersMap(size int) *OrdersMap {
+	return &OrdersMap{
+		orders: make(map[OrderNumber]Order, size),
+	}
+}
+
+func (m *OrdersMap) Get(id OrderNumber) (order Order, ok bool) {
+	m.mu.RLock()
+	order, ok = m.orders[id]
+	m.mu.RUnlock()
+
+	return
+}
+
+func (m *OrdersMap) GetAll() (orders []Order) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	if len(m.orders) == 0 {
+		return nil
+	}
+
+	orders = make([]Order, 0, len(m.orders))
+	for _, order := range m.orders {
+		orders = append(orders, order)
+	}
+
+	return orders
+}
+
+func (m *OrdersMap) Set(order Order) {
+	m.mu.Lock()
+	m.orders[order.ID] = order
+	m.mu.Unlock()
+}
+
+func (m *OrdersMap) Delete(id OrderNumber) {
+	m.mu.Lock()
+	delete(m.orders, id)
+	m.mu.Unlock()
 }

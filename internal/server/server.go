@@ -7,6 +7,8 @@ import (
 
 	"github.com/Dmitrevicz/yp-gophermart-loyalty/internal/config"
 	"github.com/Dmitrevicz/yp-gophermart-loyalty/internal/server/handler"
+	"github.com/Dmitrevicz/yp-gophermart-loyalty/internal/service"
+	"github.com/Dmitrevicz/yp-gophermart-loyalty/internal/service/accrual"
 	"github.com/Dmitrevicz/yp-gophermart-loyalty/internal/storage"
 	"github.com/Dmitrevicz/yp-gophermart-loyalty/internal/storage/postgres"
 	"github.com/gin-gonic/gin"
@@ -18,12 +20,14 @@ type server struct {
 	cfg     *config.Config
 	router  *gin.Engine
 	storage storage.Storage
+	accrual service.AccrualService
 }
 
-func New(cfg *config.Config, storage storage.Storage) *server {
+func New(cfg *config.Config, storage storage.Storage, accrual service.AccrualService) *server {
 	s := &server{
 		cfg:     cfg,
 		storage: storage,
+		accrual: accrual,
 	}
 
 	s.configureRouter()
@@ -32,7 +36,7 @@ func New(cfg *config.Config, storage storage.Storage) *server {
 }
 
 func (s *server) configureRouter() {
-	h := handler.New(s.cfg, s.storage)
+	h := handler.New(s.cfg, s.storage, s.accrual)
 
 	gin.SetMode(s.cfg.GinMode)
 	s.router = gin.New()
@@ -105,7 +109,12 @@ func Start(cfg *config.Config) (err error) {
 		return err
 	}
 
-	server := New(cfg, storage)
+	accrualService := accrual.New(cfg.AccrualSystemAddress, storage)
+	if err = accrualService.Poller().Start(); err != nil {
+		return err
+	}
+
+	server := New(cfg, storage, accrualService)
 
 	return http.ListenAndServe(cfg.RunAddress, server)
 }
