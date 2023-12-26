@@ -41,9 +41,13 @@ func (s *server) configureRouter() {
 	gin.SetMode(s.cfg.GinMode)
 	s.router = gin.New()
 
-	s.router.Use(gin.Logger())       // writes requests logs to stdout
-	s.router.Use(h.Mids.LogErrors()) // writes errors to stderr using zap logger
-	s.router.Use(h.Mids.Recovery())
+	// setup middlewares
+	s.router.Use(
+		gin.Logger(),       // writes requests logs to stdout
+		h.Mids.LogErrors(), // writes errors to stderr using zap logger
+		h.Mids.Recovery(),
+		h.Mids.Gzip(),
+	)
 
 	api := s.router.Group("/api")
 	{
