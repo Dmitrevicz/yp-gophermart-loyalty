@@ -1,17 +1,25 @@
 package server
 
 import (
+	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"github.com/Dmitrevicz/yp-gophermart-loyalty/internal/config"
+	"github.com/Dmitrevicz/yp-gophermart-loyalty/internal/logger"
 	"github.com/Dmitrevicz/yp-gophermart-loyalty/internal/server/handler"
 	"github.com/Dmitrevicz/yp-gophermart-loyalty/internal/service"
 	"github.com/Dmitrevicz/yp-gophermart-loyalty/internal/service/accrual"
 	"github.com/Dmitrevicz/yp-gophermart-loyalty/internal/storage"
 	"github.com/Dmitrevicz/yp-gophermart-loyalty/internal/storage/postgres"
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
@@ -120,5 +128,37 @@ func Start(cfg *config.Config) (err error) {
 
 	server := New(cfg, storage, accrualService)
 
-	return http.ListenAndServe(cfg.RunAddress, server)
+	s := &http.Server{
+		Addr:    cfg.RunAddress,
+		Handler: server,
+	}
+
+	go func() {
+		if err := s.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			logger.Log.Fatal("Server's ListenAndServe returned error", zap.Error(err))
+		}
+	}()
+
+	return waitShutdown(s)
+}
+
+func waitShutdown(s *http.Server) (err error) {
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	sig := <-quit
+
+	logger.Log.Info("Server caught os signal. Starting shutdown...",
+		zap.String("signal", sig.String()),
+	)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err := s.Shutdown(ctx); err != nil {
+		return fmt.Errorf("server shutdown got error: %v", err)
+	}
+
+	logger.Log.Info("Server was stopped")
+
+	return nil
 }
