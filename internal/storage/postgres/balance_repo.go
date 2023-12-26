@@ -9,6 +9,8 @@ import (
 	"github.com/Dmitrevicz/yp-gophermart-loyalty/internal/model"
 	"github.com/Dmitrevicz/yp-gophermart-loyalty/internal/storage"
 	"github.com/google/uuid"
+	"github.com/jackc/pgerrcode"
+	"github.com/jackc/pgx/v5/pgconn"
 	"go.uber.org/zap"
 )
 
@@ -108,6 +110,14 @@ func (r *BalanceRepo) Add(accrual float64, userID int64) (balance model.Balance,
 		&balance.Updated,
 		&balance.TotalWithdrawn,
 	); err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) {
+			if pgErr.Code == pgerrcode.CheckViolation {
+				// new balance value can't be negative
+				return balance, storage.ErrNegativeBalance
+			}
+		}
+
 		return balance, err
 	}
 
@@ -118,7 +128,9 @@ func (r *BalanceRepo) Add(accrual float64, userID int64) (balance model.Balance,
 
 const queryWithdraw = `
 	UPDATE loyalty_points as b
-	SET balance=b.balance - $1
+	SET 
+		balance=b.balance - $1,
+		updated=now()
 	WHERE user_id = $2;
 `
 
@@ -135,7 +147,7 @@ const queryAddWithdrawHistory = `
 
 // Withdraw decreases curent balance and writes entry to history.
 // Parameter orderID is a hypothetical order number.
-func (r *BalanceRepo) Withdraw(sum float64, userID int64, orderID string) (err error) {
+func (r *BalanceRepo) Withdraw(sum float64, userID int64, orderID model.OrderNumber) (err error) {
 	tx, err := r.s.db.Begin()
 	if err != nil {
 		return err
@@ -148,6 +160,14 @@ func (r *BalanceRepo) Withdraw(sum float64, userID int64, orderID string) (err e
 	// 1. decrease balance
 	_, err = tx.Exec(queryWithdraw, sum, userID)
 	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) {
+			if pgErr.Code == pgerrcode.CheckViolation {
+				// new balance value can't be negative
+				return storage.ErrNegativeBalance
+			}
+		}
+
 		return err
 	}
 
@@ -173,10 +193,12 @@ func (r *BalanceRepo) Withdraw(sum float64, userID int64, orderID string) (err e
 
 const queryWithdrawalsHistory = `
 	SELECT
+	 id,
 	 order_number,
 	 value,
 	 processed_at
-	FROM withdrawals WHERE user_id=$1;
+	FROM withdrawals WHERE user_id=$1
+	ORDER BY processed_at ASC;
 `
 
 // Withdrawals returns all withdrawal calls for user.
@@ -200,6 +222,7 @@ func (r *BalanceRepo) Withdrawals(userID int64) (history []model.Withdrawal, err
 	for rows.Next() {
 		var wd model.Withdrawal
 		if err = rows.Scan(
+			&wd.ID,
 			&wd.Order,
 			&wd.Value,
 			&tsProcessedAt,

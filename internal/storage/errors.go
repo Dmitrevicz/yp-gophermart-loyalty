@@ -2,6 +2,11 @@ package storage
 
 import "errors"
 
-var ErrNotFound = errors.New("nothing found")
+var (
+	ErrNotFound       = errors.New("nothing found")
+	ErrDuplicateEntry = errors.New("duplicate entry") // or Unique Violation
+	ErrCheckViolation = errors.New("check violation") // check constraint failed
 
-var ErrDuplicateEntry = errors.New("duplicate entry") // or Unique Violation
+	// insufficient funds or negative balance set attempt
+	ErrNegativeBalance = errors.New("points balance value can't be negative")
+)

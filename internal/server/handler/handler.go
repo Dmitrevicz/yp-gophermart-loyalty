@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"net/http"
 	"time"
 
 	"github.com/Dmitrevicz/yp-gophermart-loyalty/internal/config"
@@ -9,7 +8,6 @@ import (
 	"github.com/Dmitrevicz/yp-gophermart-loyalty/internal/service/accrual"
 	"github.com/Dmitrevicz/yp-gophermart-loyalty/internal/service/auth"
 	"github.com/Dmitrevicz/yp-gophermart-loyalty/internal/storage"
-	"github.com/gin-gonic/gin"
 )
 
 type handlers struct {
@@ -30,25 +28,4 @@ func New(cfg *config.Config, s storage.Storage) *handlers {
 		Mids:    NewMiddlewares(cfg, auther),
 		storage: s,
 	}
-}
-
-// Balance - получение текущего баланса счёта баллов лояльности пользователя.
-//
-// Route: GET /api/user/balance
-func (h *handlers) Balance(c *gin.Context) {
-	c.AbortWithStatus(http.StatusNotImplemented)
-}
-
-// Withdraw - запрос на списание баллов с накопительного счёта в счёт оплаты нового заказа.
-//
-// Route: POST /api/user/balance/withdraw
-func (h *handlers) Withdraw(c *gin.Context) {
-	c.AbortWithStatus(http.StatusNotImplemented)
-}
-
-// Withdrawals - получение информации о выводе средств с накопительного счёта пользователем.
-//
-// Route: GET /api/user/withdrawals
-func (h *handlers) Withdrawals(c *gin.Context) {
-	c.AbortWithStatus(http.StatusNotImplemented)
 }
