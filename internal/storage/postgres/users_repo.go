@@ -28,7 +28,7 @@ const queryGetUser = `SELECT id, login, password FROM users WHERE id=$1;`
 func (r *UsersRepo) Get(id int64) (user model.User, err error) {
 	stmt, err := r.s.db.Prepare(queryGetUser)
 	if err != nil {
-		return user, err
+		return user, storage.WrapCaller(err)
 	}
 	defer stmt.Close()
 
@@ -40,7 +40,7 @@ func (r *UsersRepo) Get(id int64) (user model.User, err error) {
 		if errors.Is(err, sql.ErrNoRows) {
 			err = storage.ErrNotFound
 		}
-		return user, err
+		return user, storage.WrapCaller(err)
 	}
 
 	return user, nil
@@ -55,7 +55,7 @@ func (r *UsersRepo) FindByLogin(login string) (user model.User, err error) {
 
 	stmt, err := r.s.db.Prepare(queryFindUserByLogin)
 	if err != nil {
-		return user, err
+		return user, storage.WrapCaller(err)
 	}
 	defer stmt.Close()
 
@@ -67,7 +67,7 @@ func (r *UsersRepo) FindByLogin(login string) (user model.User, err error) {
 		if errors.Is(err, sql.ErrNoRows) {
 			err = storage.ErrNotFound
 		}
-		return user, err
+		return user, storage.WrapCaller(err)
 	}
 
 	return user, nil
@@ -82,7 +82,7 @@ func (r *UsersRepo) Create(user model.User) (id int64, err error) {
 
 	stmt, err := r.s.db.Prepare(queryCreateUser)
 	if err != nil {
-		return id, err
+		return id, storage.WrapCaller(err)
 	}
 	defer stmt.Close()
 
@@ -93,14 +93,14 @@ func (r *UsersRepo) Create(user model.User) (id int64, err error) {
 			if pgErr.Code == pgerrcode.UniqueViolation {
 				// might not use it anywhere, but let it be...
 				// (there is already handler-level check on user signup)
-				return id, storage.ErrDuplicateEntry
+				return id, storage.WrapCaller(storage.ErrDuplicateEntry)
 			}
 		}
 
-		return id, err
+		return id, storage.WrapCaller(err)
 	}
 
-	return id, err
+	return id, storage.WrapCaller(err)
 }
 
 const queryDeleteUser = `DELETE FROM users WHERE id=$1;`
@@ -108,11 +108,11 @@ const queryDeleteUser = `DELETE FROM users WHERE id=$1;`
 func (r *UsersRepo) Delete(id int64) error {
 	stmt, err := r.s.db.Prepare(queryDeleteUser)
 	if err != nil {
-		return err
+		return storage.WrapCaller(err)
 	}
 	defer stmt.Close()
 
 	_, err = stmt.Exec(id)
 
-	return err
+	return storage.WrapCaller(err)
 }

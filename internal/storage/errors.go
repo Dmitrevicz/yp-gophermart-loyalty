@@ -1,6 +1,10 @@
 package storage
 
-import "errors"
+import (
+	"errors"
+	"fmt"
+	"runtime"
+)
 
 var (
 	ErrNotFound       = errors.New("nothing found")
@@ -10,3 +14,16 @@ var (
 	// insufficient funds or negative balance set attempt
 	ErrNegativeBalance = errors.New("points balance value can't be negative")
 )
+
+func WrapCaller(err error) error {
+	if err == nil {
+		return err
+	}
+
+	_, file, line, ok := runtime.Caller(1)
+	if ok {
+		return fmt.Errorf("%w [%s:%d]", err, file, line)
+	}
+
+	return err
+}

@@ -36,12 +36,12 @@ func NewOrdersRepo(s *Storage) (repo *OrdersRepo) {
 func initOrderNumbersGenerator(repo *OrdersRepo) (err error) {
 	lastNum, err := repo.LastOrderNumber()
 	if err != nil {
-		return err
+		return storage.WrapCaller(err)
 	}
 
 	repo.numgen, err = generator.NewOrderNumberGenerator(string(lastNum))
 	if err != nil {
-		return err
+		return storage.WrapCaller(err)
 	}
 
 	return nil
@@ -62,7 +62,7 @@ const queryGetOrder = `SELECT ` + fieldsOrders + `FROM orders WHERE id=$1;`
 func (r *OrdersRepo) Get(id model.OrderNumber) (order *model.Order, err error) {
 	stmt, err := r.s.db.Prepare(queryGetOrder)
 	if err != nil {
-		return nil, err
+		return nil, storage.WrapCaller(err)
 	}
 	defer stmt.Close()
 
@@ -82,7 +82,7 @@ func (r *OrdersRepo) Get(id model.OrderNumber) (order *model.Order, err error) {
 		if errors.Is(err, sql.ErrNoRows) {
 			err = storage.ErrNotFound
 		}
-		return nil, err
+		return nil, storage.WrapCaller(err)
 	}
 
 	if nsProcessedAt.Valid {
@@ -105,7 +105,7 @@ func (r *OrdersRepo) GetByUserID(userID int64) (orders []model.Order, err error)
 
 	stmt, err := r.s.db.Prepare(queryGetOrdersByUserID)
 	if err != nil {
-		return orders, err
+		return orders, storage.WrapCaller(err)
 	}
 	defer stmt.Close()
 
@@ -115,7 +115,7 @@ func (r *OrdersRepo) GetByUserID(userID int64) (orders []model.Order, err error)
 
 	rows, err := stmt.Query(userID)
 	if err != nil {
-		return orders, err
+		return orders, storage.WrapCaller(err)
 	}
 	defer rows.Close()
 
@@ -129,7 +129,7 @@ func (r *OrdersRepo) GetByUserID(userID int64) (orders []model.Order, err error)
 			&order.Accrual,
 			&nsProcessedAt,
 		); err != nil {
-			return orders, err
+			return orders, storage.WrapCaller(err)
 		}
 
 		if nsProcessedAt.Valid {
@@ -141,7 +141,7 @@ func (r *OrdersRepo) GetByUserID(userID int64) (orders []model.Order, err error)
 		orders = append(orders, order)
 	}
 
-	return orders, rows.Err()
+	return orders, storage.WrapCaller(rows.Err())
 }
 
 const queryGetOrdersByStatus = `SELECT ` +
@@ -155,7 +155,7 @@ func (r *OrdersRepo) GetByStatus(status string) (orders []model.Order, err error
 
 	stmt, err := r.s.db.Prepare(queryGetOrdersByStatus)
 	if err != nil {
-		return orders, err
+		return orders, storage.WrapCaller(err)
 	}
 	defer stmt.Close()
 
@@ -165,7 +165,7 @@ func (r *OrdersRepo) GetByStatus(status string) (orders []model.Order, err error
 
 	rows, err := stmt.Query(status)
 	if err != nil {
-		return orders, err
+		return orders, storage.WrapCaller(err)
 	}
 	defer rows.Close()
 
@@ -179,7 +179,7 @@ func (r *OrdersRepo) GetByStatus(status string) (orders []model.Order, err error
 			&order.Accrual,
 			&nsProcessedAt,
 		); err != nil {
-			return orders, err
+			return orders, storage.WrapCaller(err)
 		}
 
 		if nsProcessedAt.Valid {
@@ -191,7 +191,7 @@ func (r *OrdersRepo) GetByStatus(status string) (orders []model.Order, err error
 		orders = append(orders, order)
 	}
 
-	return orders, rows.Err()
+	return orders, storage.WrapCaller(rows.Err())
 }
 
 // newOrderNumber generates new order number.
@@ -207,7 +207,7 @@ func (r *OrdersRepo) newOrderNumber() (number model.OrderNumber, err error) {
 				zap.String("tip", "generator logic might be reworked"),
 			)
 		} else {
-			return number, err
+			return number, storage.WrapCaller(err)
 		}
 	}
 
@@ -229,13 +229,13 @@ func (r *OrdersRepo) Create(order model.Order) (id string, err error) {
 		// Не нужно, но пока оставил.
 		order.ID, err = r.newOrderNumber()
 		if err != nil {
-			return id, err
+			return id, storage.WrapCaller(err)
 		}
 	}
 
 	stmt, err := r.s.db.Prepare(queryCreateOrder)
 	if err != nil {
-		return id, err
+		return id, storage.WrapCaller(err)
 	}
 	defer stmt.Close()
 
@@ -249,14 +249,14 @@ func (r *OrdersRepo) Create(order model.Order) (id string, err error) {
 			if pgErr.Code == pgerrcode.UniqueViolation {
 				// might not use it anywhere, but let it be...
 				// (there is already handler-level check on order creation)
-				return id, storage.ErrDuplicateEntry
+				return id, storage.WrapCaller(storage.ErrDuplicateEntry)
 			}
 		}
 
-		return id, err
+		return id, storage.WrapCaller(err)
 	}
 
-	return id, err
+	return id, storage.WrapCaller(err)
 }
 
 const querySetProcessedOrder = `
@@ -278,7 +278,7 @@ func (r *OrdersRepo) SetProcessedStatus(orderID model.OrderNumber, status string
 		processedAt,
 	)
 	if err != nil {
-		return
+		return processedAt, storage.WrapCaller(err)
 	}
 
 	return
@@ -294,7 +294,7 @@ func (r *OrdersRepo) LastOrderNumber() (orderNumber model.OrderNumber, err error
 			orderNumber = "0"
 			return orderNumber, nil
 		}
-		return "0", err
+		return "0", storage.WrapCaller(err)
 	}
 
 	return orderNumber, nil
