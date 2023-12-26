@@ -41,7 +41,7 @@ const queryGetBalance = `
 func (r *BalanceRepo) Get(userID int64) (balance model.Balance, err error) {
 	stmt, err := r.s.db.Prepare(queryGetBalance)
 	if err != nil {
-		return balance, err
+		return balance, storage.WrapCaller(err)
 	}
 	defer stmt.Close()
 
@@ -55,7 +55,7 @@ func (r *BalanceRepo) Get(userID int64) (balance model.Balance, err error) {
 		if errors.Is(err, sql.ErrNoRows) {
 			err = storage.ErrNotFound
 		}
-		return balance, err
+		return balance, storage.WrapCaller(err)
 	}
 
 	balance.UserID = userID
@@ -98,7 +98,7 @@ func (r *BalanceRepo) Add(accrual float64, userID int64) (balance model.Balance,
 
 	stmt, err := r.s.db.Prepare(querySetOrUpdateBalance)
 	if err != nil {
-		return balance, err
+		return balance, storage.WrapCaller(err)
 	}
 	defer stmt.Close()
 
@@ -114,16 +114,16 @@ func (r *BalanceRepo) Add(accrual float64, userID int64) (balance model.Balance,
 		if errors.As(err, &pgErr) {
 			if pgErr.Code == pgerrcode.CheckViolation {
 				// new balance value can't be negative
-				return balance, storage.ErrNegativeBalance
+				return balance, storage.WrapCaller(storage.ErrNegativeBalance)
 			}
 		}
 
-		return balance, err
+		return balance, storage.WrapCaller(err)
 	}
 
 	balance.UserID = userID
 
-	return balance, err
+	return balance, storage.WrapCaller(err)
 }
 
 const queryWithdraw = `
@@ -150,7 +150,7 @@ const queryAddWithdrawHistory = `
 func (r *BalanceRepo) Withdraw(sum float64, userID int64, orderID model.OrderNumber) (err error) {
 	tx, err := r.s.db.Begin()
 	if err != nil {
-		return err
+		return storage.WrapCaller(err)
 	}
 
 	defer func() {
@@ -164,28 +164,28 @@ func (r *BalanceRepo) Withdraw(sum float64, userID int64, orderID model.OrderNum
 		if errors.As(err, &pgErr) {
 			if pgErr.Code == pgerrcode.CheckViolation {
 				// new balance value can't be negative
-				return storage.ErrNegativeBalance
+				return storage.WrapCaller(storage.ErrNegativeBalance)
 			}
 		}
 
-		return err
+		return storage.WrapCaller(err)
 	}
 
 	// generate withdrawal id
 	wdID, err := uuid.NewV7()
 	if err != nil {
 		logger.Log.Error("uuid generator failed", zap.Error(err))
-		return err
+		return storage.WrapCaller(err)
 	}
 
 	// 2. save withdrawal entry to history
-	_, err = tx.Exec(queryAddWithdrawHistory, wdID, sum, userID)
+	_, err = tx.Exec(queryAddWithdrawHistory, wdID, userID, orderID, sum)
 	if err != nil {
-		return err
+		return storage.WrapCaller(err)
 	}
 
 	if err = tx.Commit(); err != nil {
-		return err
+		return storage.WrapCaller(err)
 	}
 
 	return nil
@@ -207,7 +207,7 @@ func (r *BalanceRepo) Withdrawals(userID int64) (history []model.Withdrawal, err
 
 	stmt, err := r.s.db.Prepare(queryWithdrawalsHistory)
 	if err != nil {
-		return history, err
+		return history, storage.WrapCaller(err)
 	}
 	defer stmt.Close()
 
@@ -215,7 +215,7 @@ func (r *BalanceRepo) Withdrawals(userID int64) (history []model.Withdrawal, err
 
 	rows, err := stmt.Query(userID)
 	if err != nil {
-		return history, err
+		return history, storage.WrapCaller(err)
 	}
 	defer rows.Close()
 
@@ -227,7 +227,7 @@ func (r *BalanceRepo) Withdrawals(userID int64) (history []model.Withdrawal, err
 			&wd.Value,
 			&tsProcessedAt,
 		); err != nil {
-			return history, err
+			return history, storage.WrapCaller(err)
 		}
 
 		wd.ProcessedAt = tsProcessedAt.Format(model.LayoutTimestamps)
@@ -235,5 +235,5 @@ func (r *BalanceRepo) Withdrawals(userID int64) (history []model.Withdrawal, err
 		history = append(history, wd)
 	}
 
-	return history, rows.Err()
+	return history, storage.WrapCaller(rows.Err())
 }
