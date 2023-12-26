@@ -47,7 +47,7 @@ const progressionLimit = 5
 
 // progression decides what duration till next attempt should be waited
 func (r *Retrier) progression(currentAttempt int) {
-	if currentAttempt <= 1 || currentAttempt >= progressionLimit {
+	if currentAttempt <= 1 || currentAttempt > progressionLimit {
 		// interval duration will be increased at max 5 times
 		// to prevent potentially endless wait
 		return
@@ -55,8 +55,8 @@ func (r *Retrier) progression(currentAttempt int) {
 
 	// TODO: add random jitter as told somewhere in best practices
 	// https://aws.amazon.com/blogs/architecture/exponential-backoff-and-jitter/
-	r.interval = r.interval + time.Second
-	r.interval = r.interval * 2
+	r.interval = (r.interval + time.Millisecond*500) * 2
+	// 0.5, 2.0, 5.0, 11.0, 23.0
 }
 
 // Do does a retry of f().
@@ -87,7 +87,7 @@ func (r *Retrier) Do(action string, f func() error) (err error) {
 
 		// handle int overflow because loop can be set up to run infinitely
 		if i < 0 {
-			i = progressionLimit
+			i = progressionLimit + 1
 		}
 	}
 
