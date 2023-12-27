@@ -1,0 +1,3 @@
+DROP TABLE IF EXISTS withdrawals;
+DROP TABLE IF EXISTS loyalty_points;
+DROP TABLE IF EXISTS orders;
